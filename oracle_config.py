@@ -1,7 +1,10 @@
 # oracle_config.py
+import os
+from dotenv import load_dotenv
 import cx_Oracle
 import pandas as pd
-import os
+
+load_dotenv()  # .env 파일에서 환경변수 불러오기
 
 # Oracle Instant Client 경로
 oracle_path = r"C:\oracle\instantclient_23_8"
@@ -10,8 +13,16 @@ os.environ["ORACLE_HOME"] = oracle_path
 os.environ["NLS_LANG"] = "KOREAN_KOREA.AL32UTF8"
 
 def get_connection():
-    dsn = cx_Oracle.makedsn("43.202.1.56", 1521, sid="XE")
-    conn = cx_Oracle.connect(user="system", password="oracle", dsn=dsn)
+    dsn = cx_Oracle.makedsn(
+        os.getenv("ORACLE_HOST"), 1521, sid="XE"
+    )
+
+    conn = cx_Oracle.connect(
+        user=os.getenv("ORACLE_USER"),
+        password=os.getenv("ORACLE_PASSWORD"),
+        dsn=dsn
+    )
+
     return conn
 
 def run_queries(user_id):
