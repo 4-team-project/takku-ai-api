@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y libaio1 unzip wget && \
 
 # Oracle 라이브러리 경로 설정
 ENV LD_LIBRARY_PATH=/opt/oracle
+ENV ORACLE_HOME=/opt/oracle
 
 # 작업 디렉토리 설정
 WORKDIR /app
@@ -18,5 +19,8 @@ COPY . /app
 # 패키지 설치
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
-# 애플리케이션 실행
-CMD ["python", "app.py"]
+# 포트 설정 (Render는 10000 포트 사용)
+ENV PORT=10000
+
+# FastAPI 앱 실행 (uvicorn으로)
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "10000"]

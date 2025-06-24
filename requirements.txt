@@ -1,6 +1,7 @@
-Flask
-cx_Oracle
+fastapi
+uvicorn[standard]
+oracledb
 pandas
-scikit-learn
 numpy
+scikit-learn
 python-dotenv
