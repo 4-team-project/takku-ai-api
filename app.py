@@ -12,17 +12,16 @@ def home():
 @app.route("/recommend/<int:user_id>")
 def recommend(user_id):
     try:
-        user_df, funding_df, tag_df = run_queries(user_id)
-        result = generate_recommendations(user_df, funding_df, tag_df)
+        user_df, funding_df, tag_df, image_df = run_queries(user_id)
+        result = generate_recommendations(user_df, funding_df, tag_df, image_df)
         return Response(
-            json.dumps(result, ensure_ascii=False),  # 🔥 핵심: 한글 유지
+            json.dumps(result, ensure_ascii=False),
             content_type="application/json; charset=utf-8"
         )
     except Exception as e:
         import traceback
         traceback.print_exc()
         return Response(json.dumps({"error": str(e)}, ensure_ascii=False), status=500)
-
 
 if __name__ == '__main__':
     import os

@@ -1,7 +1,6 @@
 Flask
 cx_Oracle
 pandas
-numpy
 scikit-learn
-scipy
+numpy
 python-dotenv
