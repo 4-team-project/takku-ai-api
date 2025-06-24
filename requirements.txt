@@ -1,7 +1,7 @@
 fastapi
 uvicorn[standard]
-oracledb
+cx_Oracle
 pandas
-numpy
 scikit-learn
+numpy
 python-dotenv

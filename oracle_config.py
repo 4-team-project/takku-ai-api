@@ -1,26 +1,31 @@
 import os
 from dotenv import load_dotenv
-import oracledb  # ✅ 최신 Oracle 드라이버
+import cx_Oracle  # Oracle DB 연결 드라이버
 import pandas as pd
 
-# .env 파일에서 환경 변수 로드
+# .env 환경변수 로드
 load_dotenv()
 
-# Oracle Instant Client 경로 설정
+# Oracle Instant Client 경로 설정 (Windows 전용)
 oracle_path = r"C:\oracle\instantclient_23_8"
-oracledb.init_oracle_client(lib_dir=oracle_path)
+os.environ["PATH"] = oracle_path + ";" + os.environ.get("PATH", "")
+os.environ["ORACLE_HOME"] = oracle_path
+os.environ["NLS_LANG"] = "KOREAN_KOREA.AL32UTF8"  # 한글 깨짐 방지
 
 # Oracle DB 연결 함수
 def get_connection():
-    dsn = f"{os.getenv('ORACLE_HOST')}:1521/XE"
-    conn = oracledb.connect(
+    dsn = cx_Oracle.makedsn(
+        os.getenv("ORACLE_HOST"),
+        1521,
+        sid="XE"
+    )
+    return cx_Oracle.connect(
         user=os.getenv("ORACLE_USER"),
         password=os.getenv("ORACLE_PASSWORD"),
         dsn=dsn
     )
-    return conn
 
-# 쿼리 실행 함수
+# 여러 쿼리를 실행해서 pandas DataFrame으로 반환하는 함수
 def run_queries(user_id):
     queries = {
         "user_df": """
@@ -98,7 +103,7 @@ def run_queries(user_id):
             else:
                 dfs[key] = pd.read_sql(sql, conn)
 
-        # 컬럼 소문자 통일
+        # 컬럼명을 모두 소문자로 변경
         for df in dfs.values():
             df.columns = df.columns.str.lower()
 
