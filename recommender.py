@@ -100,4 +100,9 @@ def generate_recommendations(user_df, funding_df, tag_df, image_df):
     top = funding_df.sort_values("score", ascending=False).head(10).copy()
     top = convert_dates_to_str(top, ["start_date", "end_date", "created_at"])
     top = enrich(top)
+
+    # 중복되는 'text' 컬럼 제거
+    top.drop(columns=["text"], errors="ignore", inplace=True)
+
     return top.to_dict(orient="records")
+
