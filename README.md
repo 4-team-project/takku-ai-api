@@ -1,31 +1,30 @@
 # 🧠 Takku AI API
 
-Takku 프로젝트의 AI 기능을 담당하는 백엔드 서비스입니다.  
-Flask 기반으로 동작하며, 추천 시스템을 포함한 다양한 AI 기능을 REST API 형태로 제공합니다.
+Takku 프로젝트의 AI 기능을 담당하는 백엔드 서비스입니다.
+**FastAPI** 기반으로 동작하며, **추천 시스템**과 **리뷰 요약 기능**을 REST API로 제공합니다.
 
 ---
 
 ## 📌 주요 기능
 
-- 사용자 기반 추천 API
-- Oracle DB 연동
-- 통계 모델 등의 AI 기능 확장 예정
+* 🔍 **사용자 기반 펀딩 추천 API**
+* 📝 **리뷰 요약 (TextRank 기반)**
+* 🗄️ Oracle DB 연동
 
 ---
 
 ## 📁 프로젝트 구조
 
 ```
-
 takku-ai-api/
-├── app.py                # Flask 진입점
-├── oracle\_config.py      # Oracle 연결 및 쿼리 처리
+├── app.py                # FastAPI 진입점
+├── oracle_config.py      # Oracle 연결 및 쿼리 처리
+├── recommender.py        # 추천 로직
+├── summarizer.py         # 리뷰 요약 로직
 ├── requirements.txt      # Python 의존성 목록
-├── Dockerfile            # Docker 컨테이너 정의
-├── .env                  # 환경 변수 (로컬 전용)
+├── .env                  # 환경 변수 파일 (로컬 실행용)
 └── ...
-
-````
+```
 
 ---
 
@@ -34,54 +33,62 @@ takku-ai-api/
 ### 🧪 로컬 실행
 
 ```bash
-# 가상환경 생성
+# 가상환경 생성 및 활성화
 python -m venv venv
-source venv/bin/activate      # Windows: venv\Scripts\activate
+# Windows
+venv\Scripts\activate
+# macOS/Linux
+source venv/bin/activate
 
 # 의존성 설치
 pip install -r requirements.txt
 
-# 앱 실행
-python app.py
-````
-
-### 🐳 Docker 실행
-
-```bash
-docker build -t takku-ai-api .
-docker run -p 5000:5000 takku-ai-api
+# 서버 실행
+uvicorn app:app --reload
 ```
 
 ---
 
-## 🔐 환경 변수 (.env)
-
-`.env` 파일 예시:
+## 🔐 환경 변수 (.env 예시)
 
 ```env
 ORACLE_USER=your_oracle_username
 ORACLE_PASSWORD=your_oracle_password
-ORACLE_DSN=host:port/service_name
+ORACLE_HOST=your_oracle_host
 ```
 
-※ Render 환경에서는 Dashboard > Environment에서 직접 입력합니다.
+> Oracle은 `SID=XE` 또는 `SERVICE_NAME=XE`를 사용하도록 설정되어 있습니다.
+> Windows에서는 Oracle Instant Client 설치 후 환경변수에 PATH 추가 필요.
 
 ---
 
 ## 📡 API 명세
 
-| 기능     | URL                    | HTTP | 요청 파라미터        | 응답 모델       | 설명                |
-| ------ | ---------------------- | ---- | -------------- | ----------- | ----------------- |
-| 사용자 추천 | `/recommend/{user_id}` | GET  | `user_id: int` | `List[str]` | 해당 사용자에게 추천 결과 반환 |
+| 기능    | URL                     | HTTP | 설명                       |
+| ----- | ----------------------- | ---- | ------------------------ |
+| 홈 확인  | `/`                     | GET  | 서버 정상 동작 확인용 응답          |
+| 추천 결과 | `/recommend/{user_id}`  | GET  | 해당 유저의 관심 태그 기반 추천 결과 반환 |
+| 리뷰 요약 | `/summary/{product_id}` | GET  | 해당 상품의 최신 리뷰 100개 요약 반환  |
 
 
+---
 
 ## ⚙️ 기술 스택
 
 * Python 3.10
-* Flask
+* **FastAPI**
 * cx\_Oracle
 * Oracle Instant Client
-* Pandas, Scikit-learn
-* Docker
+* Pandas / scikit-learn / NumPy
+* KoNLPy (Okt 형태소 분석기)
+* networkx
+* JPype1
+* Docker (선택 사항)
+
+---
+
+## 📝 참고
+
+* 본 서비스는 **한국어 리뷰 기반 분석**에 특화되어 있으며, 추천 시스템은 **콘텐츠 기반 필터링**을 사용합니다.
+* TextRank 요약 알고리즘은 Konlpy를 기반으로 개선된 **중복 문장 제거 및 중요도 순 요약**을 포함합니다.
 
