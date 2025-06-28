@@ -24,18 +24,11 @@ def recommend(user_id: int):
 @app.get("/summary/{product_id}")
 def summarize(product_id: int):
     try:
-        summary_list = summarize_reviews_for_product(product_id)
-
-        if not summary_list:
-            raise HTTPException(status_code=404, detail="No reviews found")
-
-        return {
-            "productId": product_id,
-            "summary": summary_list
-        }
-
-    except HTTPException:
-        raise
+        summary = summarize_reviews_for_product(product_id)
+        return {"productId": product_id, "summary": summary}
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail="No review content found.")
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
