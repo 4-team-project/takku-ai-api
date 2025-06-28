@@ -9,7 +9,6 @@ load_dotenv()
 # Oracle Instant Client 경로 설정 (Windows 전용)
 oracle_path = r"C:\oracle\instantclient_23_8"
 os.environ["PATH"] = oracle_path + ";" + os.environ.get("PATH", "")
-os.environ["ORACLE_HOME"] = oracle_path
 os.environ["NLS_LANG"] = "KOREAN_KOREA.AL32UTF8"  # 한글 깨짐 방지
 
 # Oracle DB 연결 함수
@@ -17,7 +16,7 @@ def get_connection():
     dsn = cx_Oracle.makedsn(
         os.getenv("ORACLE_HOST"),
         1521,
-        sid="XE"
+        service_name="XE"
     )
     return cx_Oracle.connect(
         user=os.getenv("ORACLE_USER"),

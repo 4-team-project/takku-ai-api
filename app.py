@@ -1,7 +1,8 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
-from oracle_config import run_queries
+from oracle_config import run_queries, get_connection
 from recommender import generate_recommendations
+from summarizer import summarize_reviews_for_product
 import traceback
 
 app = FastAPI()
@@ -16,6 +17,25 @@ def recommend(user_id: int):
         user_df, funding_df, tag_df, image_df = run_queries(user_id)
         result = generate_recommendations(user_df, funding_df, tag_df, image_df)
         return JSONResponse(content=result, media_type="application/json")
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/summary/{product_id}")
+def summarize(product_id: int):
+    try:
+        summary_list = summarize_reviews_for_product(product_id)
+
+        if not summary_list:
+            raise HTTPException(status_code=404, detail="No reviews found")
+
+        return {
+            "productId": product_id,
+            "summary": summary_list
+        }
+
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
