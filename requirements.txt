@@ -2,7 +2,9 @@ fastapi
 uvicorn[standard]
 cx_Oracle
 pandas
-scikit-learn
 numpy
+scikit-learn
+scipy
 python-dotenv
 networkx
+sentence-transformers
