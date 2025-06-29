@@ -8,3 +8,4 @@ scipy
 python-dotenv
 networkx
 sentence-transformers
+torch
