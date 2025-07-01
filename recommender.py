@@ -1,10 +1,12 @@
+# recommender.py (예외처리 포함)
+
 import pandas as pd
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from scipy.sparse import hstack, csr_matrix
 
-# ✅ camelCase DTO 필드에 맞춰 반환
+
 def format_funding_response(df):
     allowed_keys = {
         "fundingId", "productId", "storeId", "fundingType", "fundingName", "fundingDesc",
@@ -51,14 +53,17 @@ def format_funding_response(df):
     ]
 
 
-# ✅ 추천 리스트 생성 함수
 def generate_recommendations(user_df, funding_df, tag_df, image_df):
 
+    if funding_df.empty:
+        print("[INFO] funding_df is empty. No recommendations available.")
+        return []
+
     def enrich(df):
-        tag_map = tag_df.groupby("funding_id")["tag_name"].apply(list).to_dict()
+        tag_map = tag_df.groupby("funding_id")["tag_name"].apply(list).to_dict() if not tag_df.empty else {}
         image_map = image_df.groupby("funding_id")["image_url"].apply(
             lambda urls: [{"imageUrl": url} for url in urls]
-        ).to_dict()
+        ).to_dict() if not image_df.empty else {}
 
         df["tagList"] = df["funding_id"].apply(lambda fid: tag_map.get(fid, []))
         df["images"] = df["funding_id"].apply(lambda fid: image_map.get(fid, []))
@@ -72,47 +77,64 @@ def generate_recommendations(user_df, funding_df, tag_df, image_df):
         df["urgency_score"] = 1 / (1 + df["days_left"])
         return df
 
-    # 콜드 스타트 대응
+    funding_df = funding_df.fillna({"avg_rating": 0, "urgency_score": 0})
+
     if user_df.empty:
         funding_df = prepare_urgency_score(funding_df)
-        funding_df["score"] = funding_df["avg_rating"] * 0.7 + funding_df["urgency_score"] * 0.3
+        funding_df["score"] = funding_df["avg_rating"].fillna(0) * 0.7 + funding_df["urgency_score"].fillna(0) * 0.3
         top = funding_df.sort_values("score", ascending=False).head(10).copy()
         top = enrich(top)
         return format_funding_response(top)
 
-    # 유저 기반 추천
     user_tag_counts = user_df.groupby("tag_id")["qty"].sum()
-    all_tags = sorted(
-        set(map(str, user_tag_counts.index)).union(map(str, tag_df["tag_name"].unique()))
-    )
+    all_tags = sorted(set(map(str, user_tag_counts.index)).union(map(str, tag_df["tag_name"].unique())))
     user_tag_vector = np.array([user_tag_counts.get(tag, 0) for tag in all_tags]).reshape(1, -1)
 
     user_df["text"] = user_df["funding_name"].fillna("") + " " + user_df["funding_desc"].fillna("")
     funding_df["text"] = funding_df["funding_name"].fillna("") + " " + funding_df["funding_desc"].fillna("")
 
     tfidf = TfidfVectorizer(max_features=500)
-    tfidf.fit(pd.concat([user_df["text"], funding_df["text"]], ignore_index=True))
+    try:
+        combined_text = pd.concat([user_df["text"], funding_df["text"]], ignore_index=True)
+        tfidf.fit(combined_text)
+    except ValueError:
+        print("[ERROR] TF-IDF fitting failed. Returning empty result.")
+        return []
 
     user_text_matrix = tfidf.transform(user_df["text"])
     user_text_vector = np.asarray(user_text_matrix.mean(axis=0)).reshape(1, -1)
     funding_text_matrix = tfidf.transform(funding_df["text"])
 
-    pivot = tag_df.pivot_table(index="funding_id", columns="tag_name", aggfunc="size", fill_value=0)
+    pivot = tag_df.pivot_table(index="funding_id", columns="tag_name", aggfunc="size", fill_value=0) if not tag_df.empty else pd.DataFrame()
+
     for tag in all_tags:
         if tag not in pivot.columns:
             pivot[tag] = 0
     pivot = pivot[all_tags]
-    pivot = pivot.reindex(funding_df["funding_id"]).fillna(0)
+
+    try:
+        pivot = pivot.reindex(funding_df["funding_id"]).fillna(0)
+    except Exception as e:
+        print(f"[ERROR] Pivot reindex failed: {e}")
+        return []
 
     funding_tag_matrix = csr_matrix(pivot.values)
     user_tag_matrix = csr_matrix(user_tag_vector)
 
-    funding_full_matrix = hstack([funding_tag_matrix, funding_text_matrix])
-    user_full_vector = hstack([user_tag_matrix, user_text_vector])
+    try:
+        funding_full_matrix = hstack([funding_tag_matrix, funding_text_matrix])
+        user_full_vector = hstack([user_tag_matrix, user_text_vector])
+    except ValueError as e:
+        print(f"[ERROR] Sparse matrix stacking failed: {e}")
+        return []
 
-    scores = cosine_similarity(funding_full_matrix, user_full_vector).flatten()
+    try:
+        scores = cosine_similarity(funding_full_matrix, user_full_vector).flatten()
+    except ValueError as e:
+        print(f"[ERROR] Cosine similarity failed: {e}")
+        return []
+
     funding_df["score"] = scores
-
     top = funding_df.sort_values("score", ascending=False).head(10).copy()
     top = enrich(top)
     return format_funding_response(top)

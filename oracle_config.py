@@ -1,37 +1,36 @@
+# oracle_config.py (예외처리 포함)
+
 import os
 from dotenv import load_dotenv
-import cx_Oracle  # Oracle DB 연결 드라이버
+import cx_Oracle
 import pandas as pd
 
-# .env 환경변수 로드
 load_dotenv()
 
-# Oracle Instant Client 경로 설정 (Windows 전용)
 oracle_path = r"C:\oracle\instantclient_23_8"
 os.environ["PATH"] = oracle_path + ";" + os.environ.get("PATH", "")
-os.environ["NLS_LANG"] = "KOREAN_KOREA.AL32UTF8"  # 한글 깨짐 방지
+os.environ["NLS_LANG"] = "KOREAN_KOREA.AL32UTF8"
 
-# Oracle DB 연결 함수
+
 def get_connection():
-    dsn = cx_Oracle.makedsn(
-        os.getenv("ORACLE_HOST"),
-        1521,
-        service_name="XE"
-    )
-    return cx_Oracle.connect(
-        user=os.getenv("ORACLE_USER"),
-        password=os.getenv("ORACLE_PASSWORD"),
-        dsn=dsn
-    )
+    host = os.getenv("ORACLE_HOST")
+    user = os.getenv("ORACLE_USER")
+    pw = os.getenv("ORACLE_PASSWORD")
 
-# 여러 쿼리를 실행해서 pandas DataFrame으로 반환하는 함수
+    if not all([host, user, pw]):
+        raise EnvironmentError("[ERROR] .env 파일에 ORACLE 환경변수가 올바르게 설정되지 않았습니다.")
+
+    dsn = cx_Oracle.makedsn(host, 1521, service_name="XE")
+    return cx_Oracle.connect(user=user, password=pw, dsn=dsn)
+
+
 def run_queries(user_id):
     queries = {
         "user_df": """
             SELECT 
                 o.funding_id,
                 f.funding_name,
-                MIN(TO_CHAR(f.funding_desc)) AS funding_desc,
+                MIN(DBMS_LOB.SUBSTR(f.funding_desc, 4000, 1)) AS funding_desc,
                 tft.tag_id,
                 SUM(o.qty) AS qty
             FROM takku_order o
@@ -47,7 +46,7 @@ def run_queries(user_id):
                 f.store_id,
                 f.funding_type,
                 f.funding_name,
-                TO_CHAR(f.funding_desc) AS funding_desc,
+                DBMS_LOB.SUBSTR(f.funding_desc, 4000, 1) AS funding_desc,
                 f.start_date,
                 f.end_date,
                 f.sale_price,
@@ -102,13 +101,14 @@ def run_queries(user_id):
             else:
                 dfs[key] = pd.read_sql(sql, conn)
 
-        # 컬럼명을 모두 소문자로 변경
         for df in dfs.values():
             df.columns = df.columns.str.lower()
 
         return dfs["user_df"], dfs["funding_df"], dfs["tag_df"], dfs["image_df"]
+
     except Exception as e:
         print(f"[쿼리 실행 실패] {e}")
         raise
+
     finally:
         conn.close()
