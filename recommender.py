@@ -39,7 +39,6 @@ def format_funding_response(df):
         "score": "score"
     }
 
-    # 날짜 포맷 통일
     for col in ["start_date", "end_date", "created_at"]:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors="coerce").dt.strftime("%Y-%m-%d")
@@ -51,21 +50,20 @@ def format_funding_response(df):
         for record in df.to_dict(orient="records")
     ]
 
+
 # ✅ 추천 리스트 생성 함수
 def generate_recommendations(user_df, funding_df, tag_df, image_df):
 
-    # 태그/이미지 리스트 추가
     def enrich(df):
         tag_map = tag_df.groupby("funding_id")["tag_name"].apply(list).to_dict()
         image_map = image_df.groupby("funding_id")["image_url"].apply(
-            lambda urls: [{"imageUrl": url} for url in urls]  # ✅ camelCase 필드
+            lambda urls: [{"imageUrl": url} for url in urls]
         ).to_dict()
 
         df["tagList"] = df["funding_id"].apply(lambda fid: tag_map.get(fid, []))
         df["images"] = df["funding_id"].apply(lambda fid: image_map.get(fid, []))
         return df
 
-    # 긴급도 점수 계산
     def prepare_urgency_score(df):
         df["end_date"] = pd.to_datetime(df["end_date"], errors="coerce")
         df["days_left"] = df["end_date"].apply(
@@ -74,7 +72,7 @@ def generate_recommendations(user_df, funding_df, tag_df, image_df):
         df["urgency_score"] = 1 / (1 + df["days_left"])
         return df
 
-    # 콜드 스타트
+    # 콜드 스타트 대응
     if user_df.empty:
         funding_df = prepare_urgency_score(funding_df)
         funding_df["score"] = funding_df["avg_rating"] * 0.7 + funding_df["urgency_score"] * 0.3
