@@ -25,7 +25,7 @@ def get_connection():
     except ValueError:
         raise ValueError("[ERROR] ORACLE_PORT는 정수여야 합니다.")
 
-    dsn = cx_Oracle.makedsn(host, port, service_name="XEPDB1")  # 또는 "XE"로 변경 가능
+    dsn = cx_Oracle.makedsn(host, port, service_name="xe")  
     return cx_Oracle.connect(user=user, password=pw, dsn=dsn)
 
 def run_queries(user_id):
