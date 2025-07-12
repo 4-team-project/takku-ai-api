@@ -1,28 +1,32 @@
-# oracle_config.py (예외처리 포함)
-
 import os
 from dotenv import load_dotenv
 import cx_Oracle
 import pandas as pd
 
+# 환경 변수 로드
 load_dotenv()
 
+# Oracle Instant Client 경로 설정
 oracle_path = r"C:\oracle\instantclient_23_8"
 os.environ["PATH"] = oracle_path + ";" + os.environ.get("PATH", "")
 os.environ["NLS_LANG"] = "KOREAN_KOREA.AL32UTF8"
 
-
 def get_connection():
     host = os.getenv("ORACLE_HOST")
+    port = os.getenv("ORACLE_PORT")
     user = os.getenv("ORACLE_USER")
     pw = os.getenv("ORACLE_PASSWORD")
 
-    if not all([host, user, pw]):
+    if not all([host, port, user, pw]):
         raise EnvironmentError("[ERROR] .env 파일에 ORACLE 환경변수가 올바르게 설정되지 않았습니다.")
 
-    dsn = cx_Oracle.makedsn(host, 1521, service_name="XE")
-    return cx_Oracle.connect(user=user, password=pw, dsn=dsn)
+    try:
+        port = int(port)
+    except ValueError:
+        raise ValueError("[ERROR] ORACLE_PORT는 정수여야 합니다.")
 
+    dsn = cx_Oracle.makedsn(host, port, service_name="XEPDB1")  # 또는 "XE"로 변경 가능
+    return cx_Oracle.connect(user=user, password=pw, dsn=dsn)
 
 def run_queries(user_id):
     queries = {
