@@ -56,6 +56,7 @@ uvicorn app:app --reload
 ORACLE_USER=your_oracle_username
 ORACLE_PASSWORD=your_oracle_password
 ORACLE_HOST=your_oracle_host
+ORACLE_PORT=your_oracle_port
 ```
 
 > Oracle은 `SID=XE` 또는 `SERVICE_NAME=XE` 기반으로 연결됩니다.
