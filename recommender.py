@@ -1,5 +1,3 @@
-# recommender.py (예외처리 포함)
-
 import pandas as pd
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -86,8 +84,8 @@ def generate_recommendations(user_df, funding_df, tag_df, image_df):
         top = enrich(top)
         return format_funding_response(top)
 
-    user_tag_counts = user_df.groupby("tag_id")["qty"].sum()
-    all_tags = sorted(set(map(str, user_tag_counts.index)).union(map(str, tag_df["tag_name"].unique())))
+    user_tag_counts = user_df.groupby("tag_name")["qty"].sum()
+    all_tags = sorted(set(tag_df["tag_name"].unique()))
     user_tag_vector = np.array([user_tag_counts.get(tag, 0) for tag in all_tags]).reshape(1, -1)
 
     user_df["text"] = user_df["funding_name"].fillna("") + " " + user_df["funding_desc"].fillna("")

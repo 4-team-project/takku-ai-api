@@ -35,13 +35,14 @@ def run_queries(user_id):
                 o.funding_id,
                 f.funding_name,
                 MIN(DBMS_LOB.SUBSTR(f.funding_desc, 4000, 1)) AS funding_desc,
-                tft.tag_id,
+                t.tag_name,
                 SUM(o.qty) AS qty
             FROM takku_order o
-            JOIN takku_funding f ON o.funding_id = f.funding_id
-            JOIN takku_funding_tag tft ON f.funding_id = tft.funding_id
+            JOIN takku_funding f     ON o.funding_id = f.funding_id
+            JOIN takku_funding_tag ft ON f.funding_id = ft.funding_id
+            JOIN takku_tag t         ON ft.tag_id = t.tag_id
             WHERE o.user_id = :user_id
-            GROUP BY o.funding_id, f.funding_name, tft.tag_id
+            GROUP BY o.funding_id, f.funding_name, t.tag_name;
         """,
         "funding_df": """
             SELECT 
