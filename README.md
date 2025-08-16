@@ -2,15 +2,7 @@
 # 🧠 Takku AI API
 
 Takku 프로젝트의 AI 기능을 담당하는 백엔드 서비스입니다.
-**FastAPI** 기반으로 동작하며, **추천 시스템**과 **리뷰 요약 기능**을 REST API 형태로 제공합니다.
-
----
-
-## 📌 주요 기능
-
-* 🔍 사용자 기반 펀딩 추천 API
-* ✂️ 최신 리뷰 요약 (TextRank 기반, 긍정/부정 분리)
-* 🗄️ Oracle DB 연동
+**FastAPI** 기반으로 동작하며, **추천 시스템**과 **리뷰 요약 기능**을 제공합니다.
 
 ---
 
@@ -19,129 +11,76 @@ Takku 프로젝트의 AI 기능을 담당하는 백엔드 서비스입니다.
 ```
 takku-ai-api/
 ├── app.py                # FastAPI 엔트리포인트
-├── oracle_config.py      # Oracle DB 연결 및 쿼리 처리
-├── recommender.py        # 추천 로직 (텍스트+태그 기반)
-├── summarizer.py         # 리뷰 요약 로직 (TextRank 기반)
-├── requirements.txt      # 패키지 의존성 목록
-├── .env                  # 환경변수 파일 (로컬 실행용)
-└── ...
+├── oracle_config.py      # Oracle DB 연결
+├── recommender.py        # 추천 로직 (태그+텍스트 하이브리드)
+├── summarizer.py         # 리뷰 요약 로직 (TextRank)
+├── requirements.txt
+└── .env
 ```
 
 ---
 
 ## 🚀 실행 방법
 
-### 🧪 로컬 개발 환경
+### 로컬 개발 환경
 
 ```bash
-# 가상환경 생성 및 활성화
 python -m venv venv
-# Windows
-venv\Scripts\activate
-# macOS/Linux
-source venv/bin/activate
+source venv/bin/activate   # macOS/Linux
+venv\Scripts\activate      # Windows
 
-# 패키지 설치
 pip install -r requirements.txt
-
-# FastAPI 실행
 uvicorn app:app --reload
 ```
 
----
-
-## 🔐 .env 설정 예시
+### 환경 변수(.env)
 
 ```env
-ORACLE_USER=your_oracle_username
-ORACLE_PASSWORD=your_oracle_password
-ORACLE_HOST=your_oracle_host
-ORACLE_PORT=your_oracle_port
+ORACLE_USER=...
+ORACLE_PASSWORD=...
+ORACLE_HOST=...
+ORACLE_PORT=1521
 ```
 
-> Oracle은 `SID=XE` 또는 `SERVICE_NAME=XE` 기반으로 연결됩니다.
-> Windows에서는 Oracle Instant Client 경로를 `PATH`에 추가해 주세요.
+> 현재 구현은 **SERVICE NAME = XE** 기반 연결을 사용합니다.
+> Windows 환경에서는 Oracle Instant Client 경로를 `PATH`에 추가해야 할 수 있습니다.
 
 ---
 
-## 📡 API 명세
+## 📡 API 개요
 
-| 메서드 | URL                     | 설명                                             |
-| --- | ----------------------- | ---------------------------------------------- |
-| GET | `/`                     | 서버 상태 확인용 기본 엔드포인트                             |
-| GET | `/recommend/{user_id}`  | 사용자 기반 펀딩 추천 결과 반환 (태그+텍스트 하이브리드, 콜드스타트 처리 포함) |
-| GET | `/summary/{product_id}` | 해당 상품의 최신 리뷰 100개를 긍정/부정으로 나누어 요약 후 반환         |
+* `/` → 서버 상태 확인
+* `/recommend/{user_id}` → 사용자 기반 펀딩 추천
+* `/summary/{product_id}` → 해당 상품 리뷰 요약
 
 ---
 
-## ⚙️ 기술 스택
+## 🔍 추천 시스템 개요
 
-* Python 3.10
-* FastAPI
-* cx\_Oracle
-* Oracle Instant Client
-* pandas / numpy / scikit-learn
-* networkx
----
-
-## 🔍 추천 시스템 작동 방식
-
-1. **사용자 기반 추천**
-
-   * 사용자 주문 내역 기반 **관심 태그 벡터 생성**
-   * 펀딩 텍스트(TF-IDF) + 태그 피처를 하이브리드 벡터로 구성
-   * **코사인 유사도**로 유사 펀딩 상위 10개 추천
-   * 결과에는 **태그 리스트 + 이미지 리스트 포함**
-
-2. **콜드스타트 처리**
-
-   * 사용자 데이터가 없는 경우:
-     `평점(70%) + 마감 임박 점수(30%)` 기반 정렬 후 추천
-
-3. **추천 결과 포맷**
-
-   * camelCase 형식
-   * 주요 필드: `fundingId`, `fundingName`, `tagList`, `images`, `score` 등
+* 사용자 주문 이력 기반으로 **태그(tag\_name 기준)** 및 **텍스트(TF-IDF)** 특징을 결합
+* **코사인 유사도**로 상위 펀딩 추천
+* 콜드스타트 시 `평점(70%) + 마감 임박 점수(30%)` 기반 정렬
+* 응답은 camelCase 포맷, `tagList`, `score` 등 주요 정보 포함
 
 ---
 
-## ✂️ 리뷰 요약 작동 방식
+## ✂️ 리뷰 요약 개요
 
-1. **데이터 수집**
-
-   * 최신 리뷰 최대 100개 수집
-   * `rating` 기준으로 긍정(4점 이상) / 부정(4점 미만) 리뷰 분리
-
-2. **텍스트 처리 및 요약**
-
-   * 문장 단위로 분리
-   * TF-IDF 기반 **코사인 유사도 행렬 생성**
-   * **TextRank** 알고리즘으로 중요 문장 추출 (중복 제거 포함)
-
-3. **반환 포맷**
-
-   ```json
-   {
-     "productId": 123,
-     "summary": {
-       "positive": ["긍정 요약 문장1", "문장2", "문장3"],
-       "negative": ["부정 요약 문장1", "문장2", "문장3"]
-     }
-   }
-   ```
-
-   > 긍정/부정 리뷰가 없는 경우: `"긍정 리뷰가 없습니다."` 또는 `"부정 리뷰가 없습니다."`
+* 최신 리뷰 최대 100개 수집
+* 평점 4점 이상은 긍정, 미만은 부정으로 분리
+* TextRank 기반 중요 문장 추출 (긍정/부정 각각 요약)
+* 리뷰가 없으면 `"긍정/부정 리뷰가 없습니다."` 반환
 
 ---
 
 ## ⚠️ 한계 및 아쉬운 점
 
-본 프로젝트는 **무료 배포 서비스 환경**(예: Render, Railway, Deta 등)을 고려하여 설계되었기 때문에,
+* 무료 배포 서비스 환경을 고려해 **경량 ML 기법**(TF-IDF, TextRank 등) 사용
+* 한국어 문장 분할은 단순 정규식 기반이라 한계 존재
 
-* 대용량 모델 사용이 불가능하며,
-* **딥러닝 기반 추천/요약 모델** 대신 **경량화된 전통 ML 기법(TextRank, TF-IDF, 코사인 유사도 등)** 을 활용했습니다.
+### 향후 개선 가능성
 
-> 향후 GPU 리소스나 고사양 서버 환경이 확보되면, **BERT 기반 요약**, **딥러닝 추천 모델(예: Neural CF)** 등의 적용도 고려해볼 수 있습니다.
-
----
+* GPU 리소스 확보 시 **BERT 기반 요약**, **딥러닝 추천 모델** 적용 가능
+* 한국어 문장 분할기/형태소 분석기 연계로 정확도 개선
+* 대규모 데이터 처리를 위한 캐시 및 벡터라이저 최적화
 
